@@ -6,11 +6,13 @@ import math
 import string # string.ascii_.lowercase
 
 class player():
+
     def __init__(self, name):
         self.name = name
         self.money = 0
         self.prizes = set()
         self.respin = False
+        self.guessedLetters = set()
 
     def addMoney(self, amount):
         print(amount)
@@ -18,7 +20,6 @@ class player():
         amount = int(''.join(amount))
         self.money += amount
         return self.money
-
     
     def __repr__(self):
         return "(f'{self.name} has ${self.money} prize money!)"
@@ -36,20 +37,23 @@ class player():
     def goRespin(self):
         self.respin = True
 
+
 class humanPlayer(player):
+
     def __init__(self, name):
         super().__init__(name)
-        self.guessedLetters = set()
+        #self.guessedLetters = set()
     
     def getGuess(self):
         return input("Enter your guess (letter or phrase)")
     
+
 class computerPlayer1(player):
 
     def __init__(self, name, difficulty ):
         player.__init__(self, name)
         self.difficulty = difficulty
-        self.guessedLetters = set()
+        #self.guessedLetters = set()
         with open("test.txt","r") as readfile:
             self.wordPool = readfile.read()
             self.wordPool = self.wordPool.split("\n")
@@ -62,8 +66,8 @@ class computerPlayer1(player):
             if (i not in guessed) and (i in letters):
                 willGuess.append(i)
         return willGuess
-    
-    def getMove(self, category, obscuredPhrase, guessed):
+
+    def getMove(self, guessed):
         sortedFrequencies = "ZQXJKVBPYGFWMUCLDRHSNIOATE"
         willGuess = self.getPossibleLetters(guessed)
         
@@ -74,16 +78,18 @@ class computerPlayer1(player):
                 if i in willGuess:
                     return i
     
-    def makeGuess(self, revealedLetters):
+    def makeGuess(self, guessedLetters):
         # Get the most popular letter after the last guessed letter
-        guess = self.commonNextLetter(revealedLetters)
+        #guess = self.commonNextLetter(revealedLetters)
 
         # Check if the guessed letter is not already guessed
-        while guess in self.guessedLetters:
-            guess = self.commonNextLetter(revealedLetters)
+        #while guess in self.guessedLetters:
+            #guess = self.commonNextLetter(revealedLetters)
 
-        self.guessedLetters.add(guess)
-        self.lastGuess = guess
+        #self.guessedLetters.add(guess)
+        #self.lastGuess = guess
+        guess = self.getMove(guessedLetters)
+
         return guess
 
     def commonNextLetter(self, revealedLetters):
@@ -149,7 +155,7 @@ def restartGame(app):
     app.boardHeight = 100
     app.cellBorderWidth = 1
     app.board = [([None] * app.cols) for row in range(app.rows)]
-    app.spinWheel = True
+    app.spinWheel = False
     app.prizes = {'Lose a Turn':'white', 
                   '$800':'red', 
                   '$550':'darkViolet',
@@ -179,22 +185,26 @@ def restartGame(app):
         app.colors.append(app.prizes[key])
     app.money = list(app.prizes.keys())
     app.userInput = []
+    app.computerInput = []
     app.randomWords = ['pit','hover','brand','barrel','hilarious','man','office','background','case',
                        'infection','discrimination','union','weave','interrupt','deputy','hear',
                        'laborer','spring','relate','angle','monstrous','hierarchy','owe','promotion',
                        'grimace','norm','loot','captain','lawyer','bubble']
     app.answer = random.choice(app.randomWords)
-    app.answer= app.answer.upper()
+    app.answer = app.answer.upper()
     app.guessedLetters = set()
     app.filledInAnswer = False
     app.spinSpeed = random.randint(10,30)*200
     app.spinFriction = 100
     app.selectedLabel = None
+    app.revealedLetters = set()
 
     for playerObj in app.players:
         playerObj.money = 0
-        playerObj.prizes = set()
+        playerObj.prizes.clear()
+        playerObj.guessedLetters.clear()
         playerObj.respin = False
+
 
 #draws the board
 def drawBoard(app):
@@ -202,6 +212,7 @@ def drawBoard(app):
         for col in range(app.cols):
             color = app.board[row][col]
             drawCell(app, row, col, color, 100)
+
 
 #draws the board border
 def drawBoardBorder(app):
@@ -215,6 +226,7 @@ def drawBoardBorder(app):
   drawRect(app.boardLeft+cellWidth*(app.cols-1), app.boardTop, cellWidth, app.boardHeight)
   drawRect(app.boardLeft, app.boardTop+cellHeight*(app.rows-1), app.boardWidth, cellHeight)
 
+
 #draws each cell
 def drawCell(app, row, col, color, opac):
     cellLeft, cellTop = getCellLeftTop(app, row, col)
@@ -224,6 +236,7 @@ def drawCell(app, row, col, color, opac):
              fill='green', border='black',
              borderWidth=app.cellBorderWidth, opacity = opac)
 
+
 #gets the location of each cell's locations
 def getCellLeftTop(app, row, col):
     cellWidth, cellHeight = getCellSize(app)
@@ -231,19 +244,23 @@ def getCellLeftTop(app, row, col):
     cellTop = app.boardTop + row * cellHeight
     return (cellLeft, cellTop)
 
+
 #draw red arrow
 def drawRedArrow(app):
     drawStar(app.width/2, app.height/5+20, 20, 3, rotateAngle = 180, fill='red', border='red')
+
 
 #draw spin button
 def drawSpinButton(app):
     drawCircle(app.width/2, app.height/2, 20, fill='lightgray', border='red')
     drawLabel('SPIN', app.width/2, app.height/2)
 
+
 #draw new game button
 def drawNewGameButton(app):
     drawRect(app.width/2-60, app.height - 60, 120, 22 , fill='lightgray', border='green')
     drawLabel('New Game?', app.width/2, app.height - 50, size = 20, bold=True)
+
 
 #draw solve game button
 def drawSolveGameButton(app):
@@ -257,6 +274,8 @@ def getCellSize(app):
     cellHeight = app.boardHeight / app.rows
     return (cellWidth, cellHeight)
 
+
+# draw A-Z 26 letters
 def draw26Letters(app):
     for index , letter in enumerate(string.ascii_lowercase):
         (x,y) = getCellLeftTop(app, 30 + int(index/9) , 5+index%9 )
@@ -265,13 +284,13 @@ def draw26Letters(app):
         drawLabel(letter.upper(),x,y, size=20, fill='gold', bold =True)
 
 
-def onKeyPress(app, key):
-    if key == 's':
-        takeStep(app)
-    if key != 'enter':
-        app.userInput.append(key)
-    if key == 'enter':
-        checkIfInAnswer(app,app.userInput)
+#def onKeyPress(app, key):
+#    if key == 's':
+#        takeStep(app)
+#    if key != 'enter':
+#        app.userInput.append(key)
+#    if key == 'enter':
+#        checkIfInAnswer(app,app.userInput)
 
 
 def getSelectedLetter(app, mouseX, mouseY):
@@ -279,10 +298,12 @@ def getSelectedLetter(app, mouseX, mouseY):
     letters = [ l.value for l in labels if (l.value.lower() in list(string.ascii_lowercase)) ] 
     return letters[0] if len(letters) > 0 else None 
 
+
 def getNewGame(app, mouseX, mouseY):
     labels = [s for s in app.group if (isinstance(s, Label) and s.contains(mouseX, mouseY))]
     letters = [ l.value for l in labels if (l.value  == "New Game?")]
     return letters[0] if len(letters) > 0 else None 
+
 
 def getSolveGame(app, mouseX, mouseY):
     labels = [s for s in app.group if (isinstance(s, Label) and s.contains(mouseX, mouseY))]
@@ -291,44 +312,17 @@ def getSolveGame(app, mouseX, mouseY):
 
 
 def isSolved(app):
-    for letter in app.answer:
-        if letter.upper() not in app.guessedLetters:
-            return False
-    return True
-
-def onMousePress(app, mouseX, mouseY):
-    if mouseX <= app.width/2 + 20 and mouseX >= app.width/2 - 20:
-        if mouseY <= app.height/2 + 20 and mouseY >= app.height/2 - 20:
-            app.spinSpeed = random.randint(800, 1600)
-            app.spinWheel = True
-            #restartGame(app)
-            return
-
-    #check input
-    letter = getSelectedLetter(app, mouseX, mouseY)
-    if letter is not None:
-        print(f'the selected letter is : {letter}')
-        app.guessedLetters.add(letter)
-        print(app.guessedLetters)
-        print(app.answer, app.guessedLetters)
-        if isSolved(app):
-            app.gameOver = True
-
-    #check input
-    solveGame = getSolveGame(app, mouseX, mouseY)
-    if solveGame is not None:
-        guessedInput = app.getTextInput('Your guess:')
-        for letter in guessedInput:
-            app.guessedLetters.add(letter.upper())
-        if isSolved(app):
-            app.gameOver = True
-
-
-    newGame = getNewGame(app, mouseX, mouseY)
-    if newGame is not None:
-        app.gameOver = False
-        restartGame(app)
-
+    if app.currentPlayerIndex == 0:
+        for letter in app.answer:
+            if letter.upper() not in app.humanPlayer.guessedLetters:
+                return False
+        return True
+    else:
+        print('check')
+        for letter in app.answer:
+            if letter.upper() not in app.computerPlayer1.guessedLetters:
+                return False
+        return True
 
 def checkIfInAnswer(app, userInput):
     if app.gameOver:
@@ -344,56 +338,88 @@ def checkIfInAnswer(app, userInput):
             print(f"Good guess! '{userInput[0]}' is in the phrase.")
             if app.currentPlayerIndex == 1:
                 if app.selectedLabel.value == 'BANKRUPT':
-                    app.computerPlayer.goBankrupt()
+                    app.computerPlayer1.goBankrupt()
+                    app.currentPlayerIndex = 0
+                    return False
                 elif app.selectedLabel.value == 'Lose a Turn':
                     app.currentPlayerIndex = 0
+                    return False
                 else:
-                    app.computerPlayer.addMoney(app.selectedLabel.value)
+                    app.computerPlayer1.addMoney(app.selectedLabel.value)
+                    return True
             elif app.currentPlayerIndex == 0:
                 if app.selectedLabel.value == 'BANKRUPT':
+                    app.currentPlayerIndex = 1
                     app.humanPlayer.goBankrupt()
+                    return False
                 elif app.selectedLabel.value == 'Lose a Turn':
                     app.currentPlayerIndex = 1
+                    return False
                 else:
                     app.humanPlayer.addMoney(app.selectedLabel.value)
+                    return True
+            return True
         else:
             print(f"You already guessed '{userInput[0]}'. Try a different letter.")
+            return 
+            
     else:
         print(f"Incorrect! '{''.join(userInput)}' is not in the phrase.")
         if app.currentPlayerIndex == 0:
             app.currentPlayerIndex = 1
+            takeComputerTurn(app)
         else:
+            return False
             app.currentPlayerIndex = 0
 
+
 def drawAnswerPhrase(app):
-    if app.filledInAnswer:
-        return
+    #if app.filledInAnswer:
+    #    return
     answerLength = len(app.answer)
     cellWidth, cellHeight = getCellSize(app)
-
     for i in range(answerLength):
         x, y = getCellLeftTop(app, 2, i+1)
         drawRect(x, y, cellWidth, cellHeight, fill='lightgrey', border='black', borderWidth=app.cellBorderWidth)
-        if app.answer[i].upper() in app.guessedLetters:
+        if app.answer[i].upper() in app.computerPlayer1.guessedLetters:
             drawLabel(app.answer[i].upper(), x + cellWidth / 2, y + cellHeight / 2, size=20, bold=True)
+        if app.answer[i].upper() in app.humanPlayer.guessedLetters:
+            drawLabel(app.answer[i].upper(), x + cellWidth / 2, y + cellHeight / 2, size=20, bold=True)
+        
 
     #app.filledInAnswer = True
+
+
 def takePlayerTurn(app, letter):
     # Check if it's the player's turn
     if app.currentPlayerIndex == 0:
         app.humanPlayer.guessedLetters.add(letter)
         print(f"{app.humanPlayer.name} guessed: {letter}")
-        checkIfInAnswer(app, [letter])
+        if checkIfInAnswer(app, letter):
+            return
+        else:
+            app.currentPlayerIndex = 0
     else:
         print("It's not your turn!")
+
 
 def takeComputerTurn(app):
     # Check if it's the computer's turn
     if app.currentPlayerIndex == 1:
-        app.computerPlayer1.makeGuess(app.guessedLetters)
-        app.currentPlayerIndex = 0  # Switch to the player's turn
-    else:
-        print("It's not the computer's turn!")
+        app.spinWheel = True
+        app.spinSpeed = random.randint(800,1600)
+        computerGuess = app.computerPlayer1.makeGuess(app.computerPlayer1.guessedLetters | app.humanPlayer.guessedLetters)
+        app.computerPlayer1.guessedLetters.add(computerGuess)
+        checkAnswer = checkIfInAnswer(app, computerGuess)
+        print(checkAnswer)
+        if checkAnswer:
+            print('computer guess correct')
+            if isSolved(app):
+                app.gameOver = True
+        elif checkAnswer == False:
+            print('computer guess wrong')
+            app.currentPlayerIndex = 0 #switch back to player
+
 
 def onMousePress(app, mouseX, mouseY):
     if mouseX <= app.width / 2 + 20 and mouseX >= app.width / 2 - 20:
@@ -403,6 +429,16 @@ def onMousePress(app, mouseX, mouseY):
                 app.spinWheel = True
             else:
                 print("It's not your turn!")
+                print("It's computer turn!")
+
+    # Check input only during the player's turn
+    if app.currentPlayerIndex == 0:
+        letter = getSelectedLetter(app, mouseX, mouseY)
+        if letter is not None:
+            print(f'in onMousePress player selected {letter}')
+            takePlayerTurn(app, letter)
+        if isSolved(app):
+            app.gameOver = True
 
     # Check input only during the player's turn
     if app.currentPlayerIndex == 0:
@@ -410,12 +446,23 @@ def onMousePress(app, mouseX, mouseY):
         if letter is not None:
             takePlayerTurn(app, letter)
 
-    # Check input only during the player's turn
-    if app.currentPlayerIndex == 0:
-        letter = getSelectedLetter(app, mouseX, mouseY)
-        if letter is not None:
-            takePlayerTurn(app, letter)        
+    #check input
+    solveGame = getSolveGame(app, mouseX, mouseY)
+    print(f'in onMousePress')
+    if solveGame is not None:
+        guessedInput = app.getTextInput('Your guess:')
+        for letter in guessedInput:
+            app.humanPlayer.guessedLetters.add(letter.upper())
+            app.computerPlayer1.guessedLetters.add(letter.upper())
+        if isSolved(app):
+            app.gameOver = True
 
+
+    newGame = getNewGame(app, mouseX, mouseY)
+    if newGame is not None:
+        app.gameOver = False
+        restartGame(app)
+        
 def onStep(app):
     if app.spinWheel == True:
         if app.spinSpeed >= 0:
@@ -428,13 +475,13 @@ def onStep(app):
             print(app.selectedLabel)
             print(f'{app.answer}')
 
-            # Check if it's the computer's turn
-            if app.currentPlayerIndex == 1:
-                app.computerPlayer1.makeGuess(app.guessedLetters)
-                app.currentPlayerIndex = 0  # Switch to the player's turn
-
             if isSolved(app):
                 app.gameOver = True
+            # Check if it's the computer's turn
+            if app.currentPlayerIndex == 1:
+                takeComputerTurn(app)
+
+
     
 def getSelectedLabel(app):
     labels = [s for s in app.group if isinstance(s, Label)]
@@ -442,10 +489,12 @@ def getSelectedLabel(app):
 
     return selectedLabel
 
+
 def takeStep(app):
     rotateList(app)
     app.colors = list(app.prizes.values())
     app.money = list(app.prizes.keys())
+
 
 def rotateList(app):
     keys = list(app.prizes.keys())
@@ -466,9 +515,11 @@ def drawWheel(app):
     for i in range(numSections):
         drawMoneyLabels(app, cx, cy, radius, numSections, i)
 
+
 def drawSection(app, cx, cy, radius, startAngle, sweepAngle, counter):
     drawArc(cx, cy, radius*2, radius*2, startAngle+app.spinSpeed, sweepAngle, fill = app.colors[counter%12])
     
+
 def drawMoneyLabels(app, cx, cy, radius, numSections, counter):
     labelRadius = 2*radius/3  # Distance of the labels from the center of the wheel
     labelAngle = 360 / numSections * counter + app.spinSpeed
@@ -484,6 +535,7 @@ def drawMoneyLabels(app, cx, cy, radius, numSections, counter):
     drawLabel(app.money[counter%12], labelX, labelY, rotateAngle = labelAngle,
               fill=fillColor, bold = True)
 
+
 def drawPlayerMoney(app):
 
     playerObj = app.humanPlayer
@@ -493,8 +545,8 @@ def drawPlayerMoney(app):
     w,h = getCellSize(app)
     drawLabel(f"{playerName}: ${playerMoney}", x,  app.height-20, bold=True )
 
-def drawComputerMoney(app):
 
+def drawComputerMoney(app):
     playerObj = app.computerPlayer1
     playerName = playerObj.name
     playerMoney = playerObj.money
@@ -502,9 +554,11 @@ def drawComputerMoney(app):
     w,h = getCellSize(app)
     drawLabel(f"{playerName}: ${playerMoney}", x,  app.height-20, bold=True )
 
+
 def gameOverScreen(app):
     drawLabel("Game Over!", app.width // 2, app.height // 2, size=50, bold=True)
     drawLabel(f"The correct phrase was: {app.answer}", app.width // 2, app.height // 2 + 50, size=20)
+
 
 def redrawAll(app):
     if app.gameOver == False:
@@ -518,7 +572,7 @@ def redrawAll(app):
         drawAnswerPhrase(app)
         draw26Letters(app)
         drawSolveGameButton(app)
-        drawAnswerPhrase(app)
+        #drawAnswerPhrase(app)
     else:
         gameOverScreen(app)
         drawNewGameButton(app)
@@ -526,6 +580,7 @@ def redrawAll(app):
 
 def main():
     runApp()
+
 
 main()
 
