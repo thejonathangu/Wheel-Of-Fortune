@@ -13,7 +13,11 @@ class player():
         self.respin = False
 
     def addMoney(self, amount):
+        print(amount)
+        amount = [char for char in amount if char.isdigit()]
+        amount = int(''.join(amount))
         self.money += amount
+        return self.money
 
     
     def __repr__(self):
@@ -35,6 +39,7 @@ class player():
 class humanPlayer(player):
     def __init__(self, name):
         super().__init__(name)
+        self.guessedLetters = set()
     
     def getGuess(self):
         return input("Enter your guess (letter or phrase)")
@@ -44,7 +49,7 @@ class computerPlayer1(player):
     def __init__(self, name, difficulty ):
         player.__init__(self, name)
         self.difficulty = difficulty
-        self.guessedLetters = []
+        self.guessedLetters = set()
         with open("test.txt","r") as readfile:
             self.wordPool = readfile.read()
             self.wordPool = self.wordPool.split("\n")
@@ -337,7 +342,20 @@ def checkIfInAnswer(app, userInput):
         if userInput[0] not in app.userInput:
             app.userInput.append(userInput[0])
             print(f"Good guess! '{userInput[0]}' is in the phrase.")
-            app.score += app.selectedLabel
+            if app.currentPlayerIndex == 1:
+                if app.selectedLabel.value == 'BANKRUPT':
+                    app.computerPlayer.goBankrupt()
+                elif app.selectedLabel.value == 'Lose a Turn':
+                    app.currentPlayerIndex = 0
+                else:
+                    app.computerPlayer.addMoney(app.selectedLabel.value)
+            elif app.currentPlayerIndex == 0:
+                if app.selectedLabel.value == 'BANKRUPT':
+                    app.humanPlayer.goBankrupt()
+                elif app.selectedLabel.value == 'Lose a Turn':
+                    app.currentPlayerIndex = 1
+                else:
+                    app.humanPlayer.addMoney(app.selectedLabel.value)
         else:
             print(f"You already guessed '{userInput[0]}'. Try a different letter.")
     else:
@@ -363,9 +381,8 @@ def drawAnswerPhrase(app):
 def takePlayerTurn(app, letter):
     # Check if it's the player's turn
     if app.currentPlayerIndex == 0:
-        app.guessedLetters.add(letter)
-        print(f"You guessed: {letter}")
-        # Add logic for checking if the letter is correct or not
+        app.humanPlayer.guessedLetters.add(letter)
+        print(f"{app.humanPlayer.name} guessed: {letter}")
         checkIfInAnswer(app, [letter])
     else:
         print("It's not your turn!")
@@ -373,21 +390,25 @@ def takePlayerTurn(app, letter):
 def takeComputerTurn(app):
     # Check if it's the computer's turn
     if app.currentPlayerIndex == 1:
-        # Implement logic for the computer's turn
-        computerPlayer1.makeGuess(revealedLetters)
+        app.computerPlayer1.makeGuess(app.guessedLetters)
         app.currentPlayerIndex = 0  # Switch to the player's turn
     else:
         print("It's not the computer's turn!")
 
-# Modify the onMousePress function to handle player's turn
 def onMousePress(app, mouseX, mouseY):
-    if mouseX <= app.width/2 + 20 and mouseX >= app.width/2 - 20:
-        if mouseY <= app.height/2 + 20 and mouseY >= app.height/2 - 20:
+    if mouseX <= app.width / 2 + 20 and mouseX >= app.width / 2 - 20:
+        if mouseY <= app.height / 2 + 20 and mouseY >= app.height / 2 - 20:
             if app.currentPlayerIndex == 0:
                 app.spinSpeed = random.randint(800, 1600)
                 app.spinWheel = True
             else:
                 print("It's not your turn!")
+
+    # Check input only during the player's turn
+    if app.currentPlayerIndex == 0:
+        letter = getSelectedLetter(app, mouseX, mouseY)
+        if letter is not None:
+            takePlayerTurn(app, letter)
 
     # Check input only during the player's turn
     if app.currentPlayerIndex == 0:
@@ -404,6 +425,7 @@ def onStep(app):
             app.spinWheel = False
             app.selectedLabel = getSelectedLabel(app)
             print(f'Spin to: {app.selectedLabel.value}')
+            print(app.selectedLabel)
             print(f'{app.answer}')
 
             # Check if it's the computer's turn
