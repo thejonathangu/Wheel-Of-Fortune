@@ -101,7 +101,7 @@ class computerPlayer1(player):
         letterFrequencies = Counter(lettersAfter)
 
         # Get the most common letter
-        mostCommonLetter = letterFrequencies.mostCommon(1)
+        mostCommonLetter = letterFrequencies.most_common(1)
         if mostCommonLetter:
             return mostCommonLetter[0][0]
         else:
@@ -125,30 +125,7 @@ def onAppStart(app):
     app.spinWheel = False
     app.filledInAnswer = False
     app.currentPrize = 0
-#    app.prizes = {'Lose a Turn':'white', 
-#                  '$800':'red', 
-#                  '$550':'darkViolet',
-#                  '$650':'pink',
-#                  '$500':'green',
-#                  '$900':'orange',
-#                  'BANKRUPT':'black',
-#                  '$600':'gold',
-#                  '$400':'blue',
-#                  '$300':'yellow',
-#                  '$1000':'indigo',
-#                  '$450':'cyan',
-#                  'Lose a Turn':'white', 
-#                  '$800':'red', 
-#                  '$550':'darkViolet',
-#                  '$650':'pink',
-#                  '$500':'green',
-#                  '$900':'orange',
-#                  'BANKRUPT':'black',
-#                  '$600':'gold',
-#                  '$400':'blue',
-#                  '$300':'yellow',
-#                  '$1000':'indigo',
-#                  '$450':'cyan'}
+    app.currentPlayerIndex = 0
     app.humanPlayer = humanPlayer('You')
     app.computerPlayer1 = computerPlayer1('Computer 1', difficulty = 'easy')
 
@@ -202,10 +179,12 @@ def restartGame(app):
                        'laborer','spring','relate','angle','monstrous','hierarchy','owe','promotion',
                        'grimace','norm','loot','captain','lawyer','bubble']
     app.answer = random.choice(app.randomWords)
+    app.answer= app.answer.upper()
     app.guessedLetters = set()
     app.filledInAnswer = False
     app.spinSpeed = random.randint(10,30)*200
     app.spinFriction = 100
+    app.selectedLabel = None
 
     for playerObj in app.players:
         playerObj.money = 0
@@ -274,8 +253,8 @@ def getCellSize(app):
     return (cellWidth, cellHeight)
 
 def draw26Letters(app):
-    for idx , letter in enumerate(string.ascii_lowercase):
-        (x,y) = getCellLeftTop(app, 30 + int(idx/9) , 5+idx%9 )
+    for index , letter in enumerate(string.ascii_lowercase):
+        (x,y) = getCellLeftTop(app, 30 + int(index/9) , 5+index%9 )
         w,h = getCellSize(app)
         drawRect(x-w/2,y-h/2,w,h,fill='darkgreen', opacity= 90)
         drawLabel(letter.upper(),x,y, size=20, fill='gold', bold =True)
@@ -358,11 +337,15 @@ def checkIfInAnswer(app, userInput):
         if userInput[0] not in app.userInput:
             app.userInput.append(userInput[0])
             print(f"Good guess! '{userInput[0]}' is in the phrase.")
-            drawAnswerPhrase(app)
+            app.score += app.selectedLabel
         else:
             print(f"You already guessed '{userInput[0]}'. Try a different letter.")
     else:
-        print(f"Try again! '{''.join(userInput)}' is not in the phrase.")
+        print(f"Incorrect! '{''.join(userInput)}' is not in the phrase.")
+        if app.currentPlayerIndex == 0:
+            app.currentPlayerIndex = 1
+        else:
+            app.currentPlayerIndex = 0
 
 def drawAnswerPhrase(app):
     if app.filledInAnswer:
@@ -377,26 +360,65 @@ def drawAnswerPhrase(app):
             drawLabel(app.answer[i].upper(), x + cellWidth / 2, y + cellHeight / 2, size=20, bold=True)
 
     #app.filledInAnswer = True
-        
+def takePlayerTurn(app, letter):
+    # Check if it's the player's turn
+    if app.currentPlayerIndex == 0:
+        app.guessedLetters.add(letter)
+        print(f"You guessed: {letter}")
+        # Add logic for checking if the letter is correct or not
+        checkIfInAnswer(app, [letter])
+    else:
+        print("It's not your turn!")
+
+def takeComputerTurn(app):
+    # Check if it's the computer's turn
+    if app.currentPlayerIndex == 1:
+        # Implement logic for the computer's turn
+        computerPlayer1.makeGuess(revealedLetters)
+        app.currentPlayerIndex = 0  # Switch to the player's turn
+    else:
+        print("It's not the computer's turn!")
+
+# Modify the onMousePress function to handle player's turn
+def onMousePress(app, mouseX, mouseY):
+    if mouseX <= app.width/2 + 20 and mouseX >= app.width/2 - 20:
+        if mouseY <= app.height/2 + 20 and mouseY >= app.height/2 - 20:
+            if app.currentPlayerIndex == 0:
+                app.spinSpeed = random.randint(800, 1600)
+                app.spinWheel = True
+            else:
+                print("It's not your turn!")
+
+    # Check input only during the player's turn
+    if app.currentPlayerIndex == 0:
+        letter = getSelectedLetter(app, mouseX, mouseY)
+        if letter is not None:
+            takePlayerTurn(app, letter)        
+
 def onStep(app):
     if app.spinWheel == True:
-        if app.spinSpeed>=0:
+        if app.spinSpeed >= 0:
             takeStep(app)
-            app.spinSpeed -=app.spinFriction
-            #print (list(app.prizes.keys())[0])
+            app.spinSpeed -= app.spinFriction
         else:
             app.spinWheel = False
-            print (list(app.prizes.keys())[0], list(app.prizes.values())[0])
-            selected_label = getSelectedLabel(app)
-            print (f'Spin to :{selected_label.value}')
-            print (f'{app.answer}')
-            #app.gameOver = True
+            app.selectedLabel = getSelectedLabel(app)
+            print(f'Spin to: {app.selectedLabel.value}')
+            print(f'{app.answer}')
+
+            # Check if it's the computer's turn
+            if app.currentPlayerIndex == 1:
+                app.computerPlayer1.makeGuess(app.guessedLetters)
+                app.currentPlayerIndex = 0  # Switch to the player's turn
+
+            if isSolved(app):
+                app.gameOver = True
     
 def getSelectedLabel(app):
     labels = [s for s in app.group if isinstance(s, Label)]
-    selected_label = min (labels , key = lambda x : abs((x.rotateAngle+360) %360 - 90))
+    selectedLabel = min (labels , key = lambda x : abs((x.rotateAngle+360) %360 - 90))
 
-    return selected_label
+    return selectedLabel
 
 def takeStep(app):
     rotateList(app)
@@ -474,6 +496,7 @@ def redrawAll(app):
         drawAnswerPhrase(app)
         draw26Letters(app)
         drawSolveGameButton(app)
+        drawAnswerPhrase(app)
     else:
         gameOverScreen(app)
         drawNewGameButton(app)
