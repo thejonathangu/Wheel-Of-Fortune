@@ -72,7 +72,7 @@ class computerPlayer1(player):
         # Get the most popular letter after the last guessed letter
         guess = self.commonNextLetter(revealedLetters)
 
-        # Check if the guessed letter is not already guessed
+        # Check if the  guessed letter is not already guessed
         while guess in self.guessedLetters:
             guess = self.commonNextLetter(revealedLetters)
 
@@ -164,7 +164,7 @@ def restartGame(app):
     app.boardHeight = 100
     app.cellBorderWidth = 1
     app.board = [([None] * app.cols) for row in range(app.rows)]
-    app.spinWheel = False
+    app.spinWheel = True
     app.prizes = {'Lose a Turn':'white', 
                   '$800':'red', 
                   '$550':'darkViolet',
@@ -200,6 +200,7 @@ def restartGame(app):
                        'grimace','norm','loot','captain','lawyer','bubble']
     app.answer = random.choice(app.randomWords)
     app.filledInAnswer = False
+    app.spinSpeed = 800
 
     for playerObj in app.players:
         playerObj.money = 0
@@ -286,13 +287,21 @@ def drawAnswerPhrase(app):
 
     app.filledInAnswer = True
         
+def onStep(app):
+    if app.spinWheel == True:
+        if app.spinSpeed>=0:
+            takeStep(app)
+            app.spinSpeed -=2
+        else:
+            app.spinWheel = False
+    
 
 def takeStep(app):
-    rotateDict(app)
+    rotateList(app)
     app.colors = list(app.prizes.values())
     app.money = list(app.prizes.keys())
 
-def rotateDict(app):
+def rotateList(app):
     keys = list(app.prizes.keys())
     vals = list(app.prizes.values())
 
@@ -308,16 +317,19 @@ def drawWheel(app):
     numSections = len(app.prizes)*2
     for i in range(numSections):
         drawSection(app, cx, cy, radius, 360/numSections*i, 360/numSections, i)
+    for i in range(numSections):
         drawMoneyLabels(app, cx, cy, radius, numSections, i)
 
 def drawSection(app, cx, cy, radius, startAngle, sweepAngle, counter):
-    drawArc(cx, cy, radius*2, radius*2, startAngle, sweepAngle, fill = app.colors[counter%12])
+    drawArc(cx, cy, radius*2, radius*2, startAngle+app.spinSpeed, sweepAngle, fill = app.colors[counter%12])
     
 def drawMoneyLabels(app, cx, cy, radius, numSections, counter):
     labelRadius = 2*radius/3  # Distance of the labels from the center of the wheel
-    labelAngle = 360 / numSections * counter
-    labelX = cx + labelRadius * math.cos(math.radians(labelAngle))
-    labelY = cy - labelRadius * math.sin(math.radians(labelAngle))
+    labelAngle = 360 / numSections * counter + app.spinSpeed
+    angleOffset = 360/(numSections*2)
+    labelX = cx + labelRadius * math.cos(math.radians(labelAngle+angleOffset))
+    labelY = cy - labelRadius * math.sin(math.radians(labelAngle+angleOffset))
+    labelAngle = 0-labelAngle-angleOffset
     if app.money[counter%12] != 'BANKRUPT':
         fillColor = 'black'
     else:
