@@ -3,6 +3,7 @@ from collections import Counter
 from functools import reduce
 import random
 
+#Class player, used by both computer and human. It is a superclass for ComputerPlayer and HumanPlayer
 class Player():
 
     def __init__(self, name):
@@ -12,6 +13,7 @@ class Player():
         self.respin = False
         self.guessedLetters = set()
 
+    #adds amount to total money
     def addMoney(self, amount):
         print(amount)
         amount = [char for char in amount if char.isdigit()]
@@ -35,7 +37,7 @@ class Player():
     def goRespin(self):
         self.respin = True
 
-
+#The human player class, gets the guess
 class HumanPlayer(Player):
 
     def __init__(self, name):
@@ -45,18 +47,20 @@ class HumanPlayer(Player):
     def getGuess(self):
         return input("Enter your guess (letter or phrase)")
     
-
+#The computer player class
 class ComputerPlayer(Player):
 
     def __init__(self, name, difficulty ):
         super().__init__(name)
         self.difficulty = difficulty
         #self.guessedLetters = set()
+        
         with open("test.txt","r") as readfile:
             self.wordPool = readfile.read()
             self.wordPool = self.wordPool.split()
         print(self.wordPool)
         
+    #Gets all the possible letters not already guessed
     def getPossibleLetters(self, guessed):
         willGuess = []
         letters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
@@ -65,7 +69,8 @@ class ComputerPlayer(Player):
             if (i not in guessed) and (i in letters):
                 willGuess.append(i)
         return willGuess
-
+    
+    #Gets the computer move if there is nothing
     def getMove(self, guessed):
         sortedFrequencies = "ZQXJKVBPYGFWMUCLDRHSNIOATE"
         willGuess = self.getPossibleLetters(guessed)
@@ -77,12 +82,14 @@ class ComputerPlayer(Player):
                 if i in willGuess:
                     return i
                 
+    #Checks if the whole phrase is empty
     def isAllEmpty(self, revealedLetters):
         for char in revealedLetters:
             if char != ' ':
                 return False
         return True
-
+    
+    #Makes the guess
     def makeGuess(self, guessedLetters, revealedLetters):
         # Get the most popular letter after the last guessed letter
         checkedLetters = set()
@@ -97,6 +104,7 @@ class ComputerPlayer(Player):
 
         return guess
     
+    #Gets the most common next letter given available letters on the page
     def commonNextLetter(self, guessedLetters, checkedLetters, revealedLetters):
         with open("test.txt","r") as readfile:
             list = readfile.read()
