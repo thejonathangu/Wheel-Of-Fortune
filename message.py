@@ -1,5 +1,6 @@
 from cmu_graphics import *
 
+#The message class
 class Message():
     def __init__(self, x, y, width, height, messageText, size, fill='lightgrey', active = True, borderWidth = 3):
         self.width = width
@@ -19,15 +20,18 @@ class Message():
         self.centerX = x
         self.centerY = y
 
+    #Draws the message
     def draw(self):
         opacity = 100 if self.active else 30
         border = 'red' if self.active else 'yellow'
         drawRect(self.left, self.top, self.width, self.height, fill=self.fill, border = border, borderWidth = self.borderWidth, opacity = opacity)
         drawLabel(self.text, self.x, self.y , size = self.size, opacity = opacity)
 
+    #Sets the message
     def setActive(self, active):
         self.active = active
 
+    #Sees if user mouse press is within the box
     def contains(self, mouseX, mouseY):
         if (mouseX > self.left and mouseX < self.right):
             if (mouseY > self.top and mouseY < self.bottom):
