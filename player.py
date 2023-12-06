@@ -132,5 +132,5 @@ class ComputerPlayer(Player):
 
         
 #Constants
-HUMAN_PLAYER = 0
-COMPUTER_PLAYER = 1
+HUMAN_PLAYER = "H"
+COMPUTER_PLAYER = "C"
