@@ -94,11 +94,9 @@ def restartGame(app):
     app.userInput = []
     app.computerInput = []
     app.currentPlayerIndex = player.HUMAN_PLAYER
-    #The text file "test.txt" used is a list of the 3000 most common words in the english language
-    #from this website: https://www.ef.edu/english-resources/english-vocabulary/top-3000-words/
     with open("test.txt","r") as readfile:
-        app.randomWords = readfile.read()
-        app.randomWords = app.randomWords.split()
+            app.randomWords = readfile.read()
+            app.randomWords = app.randomWords.split()
     app.answer = random.choice(app.randomWords)
     app.answer = app.answer.upper()
     app.guessedLetters = set()
@@ -106,7 +104,6 @@ def restartGame(app):
     app.spinFriction = 10
     app.selectedLabel = ""
     app.revealedLetters = set()
-    app.canPlayerSpin = False
 
     for playerObj in app.players:
         playerObj.money = 0
@@ -120,7 +117,10 @@ def restartGame(app):
 
     app.events = []
     app.spinSpeed = 0
+    addEvent(app, "New Game")
 
+def addEvent(app, event):
+    app.events.append({app.currentPlayerIndex : event})
 
 #draws the board
 def drawBoard(app):
@@ -180,8 +180,8 @@ def drawNewGameButton(app):
 
 #draw solve game button
 def drawSolveGameButton(app):
-    drawRect(app.width/2-72, app.height - 60, 140, 22, fill='lightgray', border='green')
-    drawLabel('Solve Game?', app.width/2, app.height - 50, size = 20, bold=True)
+    drawRect(app.width/2-72, app.height - 70, 140, 22, fill='lightgray', border='green')
+    drawLabel('Solve Game?', app.width/2, app.height - 60, size = 20, bold=True)
 
 
 #gets the size of each cell
@@ -193,8 +193,8 @@ def getCellSize(app):
 
 # draw A-Z 26 letters
 def draw26Letters(app):
-    for but in app.buttons:
-        but.draw()
+    for btn in app.buttons:
+        btn.draw()
 
 
 def getSelectedLetter(app, mouseX, mouseY):
@@ -253,43 +253,47 @@ def checkIfInAnswer(app, userInput):
         if userInput[0] not in app.userInput:
             app.userInput.append(userInput[0])
             print(f"Good guess! '{userInput[0]}' is in the phrase.")
+            addEvent(app, f'SL {userInput[0]} for {app.selectedLabel.value}')
             if app.currentPlayerIndex == player.COMPUTER_PLAYER:
                 if app.selectedLabel.value == 'BANKRUPT':
                     app.computerPlayer1.goBankrupt()
-                    app.events.append({"C":"BK"})
+                    addEvent(app, "BK")
                     return False
                 elif app.selectedLabel.value == 'Lose a Turn':
-                    app.events.append({"C":"LT"})
+                    addEvent(app, "LT")
                     return False
                 else:
                     app.computerPlayer1.addMoney(app.selectedLabel.value)
-                    app.events.append({"C":f'SL {userInput[0]} for {app.selectedLabel.value}'})
+                    addEvent(app, f'SL {userInput[0]} for {app.selectedLabel.value}')
+                    app.spinSet = False
                     return True
             elif app.currentPlayerIndex == player.HUMAN_PLAYER:
                 if app.selectedLabel.value == 'BANKRUPT':
                     app.humanPlayer.goBankrupt()
-                    app.events.append({"H":"BK"})
+                    addEvent(app, "BK")
                     return False
                 elif app.selectedLabel.value == 'Lose a Turn':
-                    app.events.append({"H":"LT"})
+                    addEvent(app, "LT")
                     return False
                 else:
                     app.humanPlayer.addMoney(app.selectedLabel.value)
-                    app.events.append({"H":f'SL {userInput[0]} for {app.selectedLabel.value}'})
+                    addEvent(app, f'SL {userInput[0]} for {app.selectedLabel.value}')
+                    app.spinSet = False
                     return True
+            app.spinSet = False
             return True
         else:
             print(f"You already guessed '{userInput[0]}'. Try a different letter.")
-            app.events.append({"H orC":f'DP {userInput[0]}'})
+            addEvent(app, f'DP {userInput[0]}')
             return
 
     else:
         print(f"Incorrect! '{''.join(userInput)}' is not in the phrase.")
         if app.currentPlayerIndex == player.HUMAN_PLAYER:
-            app.events.append({"H":f'WG {userInput[0]}'})
+            addEvent(app, f'GW {userInput[0]}')
             return False
         else:
-            app.events.append({"C":f'WG {userInput[0]}'})
+            addEvent(app, f'GW {userInput[0]}')
             return False
 
 
@@ -313,12 +317,16 @@ def takePlayerTurn(app, letter):
         app.humanPlayer.guessedLetters.add(letter)
         print(f"{app.humanPlayer.name} guessed: {letter}")
         if checkIfInAnswer(app, letter):
+            if isSolved(app):
+                app.gameOver = True
+            app.setSpin = False
             return
         else:
-            app.events.append({"H": "switch to C"})
+            addEvent(app, "switch to C")
             setCurrentPlayer(app, player.COMPUTER_PLAYER)
             app.setSpin = False
     else:
+        addEvent(app, "Not your turn")
         print("It's not your turn!")
 
 
@@ -340,38 +348,50 @@ def setSpinFriction(app):
 
 def takeComputerTurn(app):
     # Check if it's the computer's turn
+    if app.gameOver:
+        return
     if app.currentPlayerIndex == player.COMPUTER_PLAYER:
-        setSpinSpeed(app)
+        #setSpinSpeed(app)
         print("****************computer's turn and spin")
-        if app.spinWheel == False and app.spinSpeed <=0 :
-            print("********")
-        revealedLettersList = []
-        guessedLetters = (app.computerPlayer1.guessedLetters | app.humanPlayer.guessedLetters)
-        for letter in app.answer:
-            if letter in guessedLetters:
-                revealedLettersList.append(letter)
-            else:
-                revealedLettersList.append(' ')
-        print(revealedLettersList)
-        computerGuess = app.computerPlayer1.makeGuess(app.computerPlayer1.guessedLetters | 
-                                                      app.humanPlayer.guessedLetters, 
-                                                      revealedLettersList)
-        print(computerGuess)
-        app.computerPlayer1.guessedLetters.add(computerGuess)
-        print(f'****************computer guessed {computerGuess}')
-        checkAnswer = checkIfInAnswer(app, computerGuess)
-        print(f'checkAnswer {checkAnswer}')
-        if checkAnswer:
-            print('computer guess correct')
-            if isSolved(app):
-                app.gameOver = True
-        if checkAnswer == False:
-            print('computer guess wrong')
-            setCurrentPlayer(app, player.HUMAN_PLAYER) #switch back to player
+        if app.spinSpeed <=0 :
+            revealedLettersList = []
+            guessedLetters = (app.computerPlayer1.guessedLetters | app.humanPlayer.guessedLetters)
+            for letter in app.answer:
+                if letter in guessedLetters:
+                    revealedLettersList.append(letter)
+                else:
+                    revealedLettersList.append(' ')
+            print(revealedLettersList)
+            computerGuess = app.computerPlayer1.makeGuess(app.computerPlayer1.guessedLetters | 
+                                                          app.humanPlayer.guessedLetters, 
+                                                          revealedLettersList)
+            print(computerGuess)
+            app.computerPlayer1.guessedLetters.add(computerGuess)
+            print(f'****************computer guessed {computerGuess}')
+            checkAnswer = checkIfInAnswer(app, computerGuess)
+            print(f'checkAnswer {checkAnswer}')
+            if checkAnswer:
+                print('computer guess correct')
+                addEvent(app, f'GR {computerGuess}')
+                app.spinSet = False # nedd to spin again
+                if isSolved(app):
+                    app.gameOver = True
+                    addEvent(app, "Game Over")
+                return
+            if checkAnswer == False:
+                print('computer guess wrong')
+                addEvent(app, f'GW {computerGuess}')
+                addEvent(app, "switch to H")
+                setCurrentPlayer(app, player.HUMAN_PLAYER) #switch back to player
 
 
 def onMousePress(app, mouseX, mouseY):
     print(app.events)
+    print(app.humanPlayer.guessedLetters)
+    print(app.computerPlayer1.guessedLetters)
+    print(f'gameOver: {app.gameOver}')
+    if isSolved(app):
+        app.gameOver = True
     newGame = getNewGame(app, mouseX, mouseY)
     if newGame is not None:
         app.gameOver = False
@@ -390,6 +410,8 @@ def onMousePress(app, mouseX, mouseY):
             else:
                 print("It's not your turn!")
                 print("It's computer turn!")
+    if isSolved(app):
+        app.gameOver = True
 
     # Check input only during the player's turn
     if app.currentPlayerIndex == player.HUMAN_PLAYER:
@@ -419,6 +441,8 @@ def isBankrupt(app):
 
 
 def onStep(app):
+    if isSolved(app):
+        app.gameOver = True
     app.count += 1
     if app.count > 5:
         app.count = 0
@@ -433,8 +457,6 @@ def onStep(app):
             else:
                 app.computerMessage.borderWidth = 3
 
-    if app.gameOver:
-        return
     if app.currentPlayerIndex == player.HUMAN_PLAYER:
         if app.spinWheel == True:
             if app.spinSpeed >= 0:
@@ -448,17 +470,18 @@ def onStep(app):
                 print(f'{app.answer}')
                 if isBankrupt(app):
                     app.humanPlayer.goBankrupt()
-                    app.events.append({"H":"BK"})
+                    addEvent(app, "BK")
                     print(f'Switch to Computer player')
                     setCurrentPlayer(app, player.COMPUTER_PLAYER)
                     app.setSpin = False
                 if isLose_a_Turn(app):
-                    app.events.append({"H":"LT"})
+                    addEvent(app, "LT")
                     print(f'Switch to Computer player')
                     setCurrentPlayer(app, player.COMPUTER_PLAYER)
                     app.setSpin = False
 
                 if isSolved(app):
+                    addEvent(app, "GAME OVER")
                     app.gameOver = True
     # Check if it's the computer's turn
     else: # spin COMPUTER_PLAYER:
@@ -473,6 +496,7 @@ def onStep(app):
                 setSpinFriction(app)
             else:
                 takeComputerTurn(app)
+                app.setSpin = False
 
     
 def getSelectedLabel(app):
@@ -555,10 +579,13 @@ def gameOverScreen(app):
 
 def drawStatusMessage(app):
     if app.currentPlayerIndex == player.HUMAN_PLAYER:
-        app.statusMessage.text = "Your Turn: "
+        app.statusMessage.text = "Human Turn: "
     else:
         app.statusMessage.text = "AI Turn: "
+    recentEvents = str(app.events[-8:])
+    app.statusMessage.text = app.statusMessage.text + recentEvents
     app.statusMessage.draw()
+    app.statusMessage.size = 12
 
 
 def redrawAll(app):
