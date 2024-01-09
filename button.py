@@ -15,8 +15,8 @@ class Button():
         self.text = label
         self.size = size
         self.active = active
-        self.centerX = x
-        self.centerY = y
+        self.centerX = x #center x coord
+        self.centerY = y #center y coord
 
     #Draws the buttons
     def draw(self):
